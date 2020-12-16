@@ -274,7 +274,7 @@ class Schema {
 
                     DataFetcher getFetcher = dataFetcherManager.getReadingFetcher(entity, GET).orElse(new SingleEntityDataFetcher(entity))
 
-                    final String GET_FIELD_NAME = namingConvention.getGet(entity)
+                    final String GET_FIELD_NAME = getOperation.name ?: namingConvention.getGet(entity)
 
                     GraphQLFieldDefinition.Builder queryOne = newFieldDefinition()
                             .name(GET_FIELD_NAME)
@@ -297,7 +297,7 @@ class Schema {
 
                     DataFetcher listFetcher = dataFetcherManager.getReadingFetcher(entity, LIST).orElse(null)
 
-                    final String LIST_FIELD_NAME = namingConvention.getList(entity)
+                    final String LIST_FIELD_NAME = listOperation.name ?: namingConvention.getList(entity)
                     GraphQLFieldDefinition.Builder queryAll = newFieldDefinition()
                             .name(LIST_FIELD_NAME)
                             .description(listOperation.description)
@@ -341,7 +341,7 @@ class Schema {
 
                     DataFetcher countFetcher = dataFetcherManager.getReadingFetcher(entity, COUNT).orElse(new CountEntityDataFetcher(entity))
 
-                    final String COUNT_FIELD_NAME = namingConvention.getCount(entity)
+                    final String COUNT_FIELD_NAME = countOperation.name ?: namingConvention.getCount(entity)
                     final GraphQLOutputType COUNT_OUTPUT_TYPE = (GraphQLOutputType)typeManager.getType(Integer)
 
                     GraphQLFieldDefinition.Builder queryCount = newFieldDefinition()
@@ -373,7 +373,7 @@ class Schema {
 
                     createFetcher.dataBinder = dataBinder
 
-                    final String CREATE_FIELD_NAME = namingConvention.getCreate(entity)
+                    final String CREATE_FIELD_NAME = createOperation.name ?: namingConvention.getCreate(entity)
 
                     GraphQLFieldDefinition.Builder create = newFieldDefinition()
                             .name(CREATE_FIELD_NAME)
@@ -403,7 +403,7 @@ class Schema {
 
                     updateFetcher.dataBinder = dataBinder
 
-                    final String UPDATE_FIELD_NAME = namingConvention.getUpdate(entity)
+                    final String UPDATE_FIELD_NAME = updateOperation.name ?: namingConvention.getUpdate(entity)
 
                     GraphQLFieldDefinition.Builder update = newFieldDefinition()
                             .name(UPDATE_FIELD_NAME)
@@ -433,7 +433,7 @@ class Schema {
 
                     deleteFetcher.responseHandler = deleteResponseHandler
 
-                    final String DELETE_FIELD_NAME = namingConvention.getDelete(entity)
+                    final String DELETE_FIELD_NAME = deleteOperation.name ?: namingConvention.getDelete(entity)
                     final GraphQLObjectType DELETE_OBJECT_TYPE = deleteResponseHandler.getObjectType(typeManager)
 
                     GraphQLFieldDefinition.Builder delete = newFieldDefinition()

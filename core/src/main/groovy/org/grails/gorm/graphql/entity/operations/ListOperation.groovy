@@ -5,6 +5,7 @@ import groovy.transform.builder.Builder
 import groovy.transform.builder.SimpleStrategy
 import org.grails.gorm.graphql.entity.dsl.helpers.Deprecatable
 import org.grails.gorm.graphql.entity.dsl.helpers.Describable
+import org.grails.gorm.graphql.entity.dsl.helpers.Named
 
 /**
  * Stores metadata about the list operation that this library
@@ -16,7 +17,7 @@ import org.grails.gorm.graphql.entity.dsl.helpers.Describable
  */
 @Builder(prefix = '', builderStrategy = SimpleStrategy)
 @CompileStatic
-class ListOperation implements Describable<ListOperation>, Deprecatable<ListOperation> {
+class ListOperation implements Named<ListOperation>, Describable<ListOperation>, Deprecatable<ListOperation> {
     boolean enabled = true
     boolean paginate = false
 }
