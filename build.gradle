@@ -74,6 +74,50 @@ subprojects {
 
     apply from:"${commonBuild}/common-publishing.gradle"
 
+    publishing {
+        repositories {
+            maven {
+                name = "GitHubPackages"
+                url = uri("https://maven.pkg.github.com/jamesdh/gorm-graphql")
+                credentials {
+                    username = project.findProperty("gpr.user") ?: System.getenv("USERNAME")
+                    password = project.findProperty("gpr.key") ?: System.getenv("GITHUB_TOKEN")
+                }
+            }
+        }
+        publications {
+            gpr(MavenPublication) {
+                if(isGrailsPlugin) {
+                    artifactId( project.name - 'grails-plugin-' )
+                }
+                else if(project.name.contains('/')) {
+                    artifactId( project.name.substring(project.name.indexOf('/') + 1) )
+                }
+
+                from components.java
+
+                afterEvaluate {
+                    artifact source: sourcesJar, classifier: "sources"
+                    artifact source: javadocJar, classifier: "javadoc"
+                }
+                if(isGrailsPlugin) {
+                    artifact source:"${project.buildDir}/classes/groovy/main/META-INF/grails-plugin.xml",
+                            classifier:"plugin",
+                            extension:'xml'
+                }
+                pom.withXml {
+                    def xml = asNode()
+
+                    xml.children().last() + pomInfo
+                    // dependency management shouldn't be included
+                    def n = xml.get("dependencyManagement")
+                    if (n)
+                        xml.remove(n)
+                }
+            }
+        }
+    }
+
     dependencies {
         testCompile "org.codehaus.groovy:groovy-test:$groovyVersion"
     }
@@ -92,8 +136,3 @@ subprojects {
         }
     }
 }
-
-//buildScan {
-//    termsOfServiceUrl = 'https://gradle.com/terms-of-service'
-//    termsOfServiceAgree = 'yes'
-//}
