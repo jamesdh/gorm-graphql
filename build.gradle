@@ -19,7 +19,15 @@ repositories {
     maven { url "https://repo.grails.org/grails/core" }
 }
 
-version project.projectVersion
+String branchedVersion
+if(project.projectVersion.contains("BUILD-SNAPSHOT")) {
+    String branch = System.getenv("BRANCH")?.replaceAll("/", "_")
+    if(branch) {
+        println "using branch $branch"
+        branchedVersion = "${project.projectVersion - ".BUILD-SNAPSHOT"}.${branch}.BUILD-SNAPSHOT"
+    }
+}
+version branchedVersion ?: project.projectVersion
 
 ext {
     commonBuild = 'https://raw.githubusercontent.com/grails/grails-common-build/9531dd5e6d774b86e2d8220aff3bcec3add43320'
@@ -27,7 +35,7 @@ ext {
 
 subprojects {
 
-    version project.projectVersion
+    version branchedVersion ?: project.projectVersion
 
     ext {
         userOrg = "grails"

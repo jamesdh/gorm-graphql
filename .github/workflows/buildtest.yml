@@ -8,7 +8,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        java: ['8', '11']
+        java: ['8']
     env:
       WORKSPACE: ${{ github.workspace }}
       GRADLE_OPTS: -Xmx1500m -Dfile.encoding=UTF-8
@@ -20,6 +20,8 @@ jobs:
           key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle') }}
           restore-keys: |
             ${{ runner.os }}-gradle-
+      - name: Get branch name
+        uses: nelonoel/branch-name@v1.0.1
       - name: Set up JDK
         uses: actions/setup-java@v1
         with:
@@ -43,3 +45,4 @@ jobs:
         env:
           USERNAME: ${{ secrets.GPR_USER }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          BRANCH: ${BRANCH_NAME}
