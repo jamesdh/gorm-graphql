@@ -23,8 +23,8 @@ String branchedVersion
 if(project.projectVersion.contains("BUILD-SNAPSHOT")) {
     String branch = System.getenv("BRANCH")?.replaceAll("/", "_")
     if(branch) {
-        println "using branch $branch"
         branchedVersion = "${project.projectVersion - ".BUILD-SNAPSHOT"}.${branch}.BUILD-SNAPSHOT"
+        println "Publishing as SNAPSHOT branch version '$branchedVersion'"
     }
 }
 version branchedVersion ?: project.projectVersion
