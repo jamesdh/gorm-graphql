@@ -268,187 +268,190 @@ class Schema {
 
                 ProvidedOperation queryOperation = mapping.operations.query
                 ProvidedOperation mutationOperation = mapping.operations.mutation
+                ProvidedOperation providedOperation = mapping.operations.provided
 
-                ProvidedOperation getOperation = mapping.operations.get
-                if (queryOperation.enabled && getOperation.enabled) {
+                if(providedOperation.enabled) {
+                    ProvidedOperation getOperation = mapping.operations.get
+                    if (queryOperation.enabled && getOperation.enabled) {
 
-                    DataFetcher getFetcher = dataFetcherManager.getReadingFetcher(entity, GET).orElse(new SingleEntityDataFetcher(entity))
+                        DataFetcher getFetcher = dataFetcherManager.getReadingFetcher(entity, GET).orElse(new SingleEntityDataFetcher(entity))
 
-                    final String GET_FIELD_NAME = namingConvention.getGet(entity)
+                        final String GET_FIELD_NAME = namingConvention.getGet(entity)
 
-                    GraphQLFieldDefinition.Builder queryOne = newFieldDefinition()
-                            .name(GET_FIELD_NAME)
-                            .type(OBJECT_TYPE)
-                            .description(getOperation.description)
-                            .deprecate(getOperation.deprecationReason)
+                        GraphQLFieldDefinition.Builder queryOne = newFieldDefinition()
+                                .name(GET_FIELD_NAME)
+                                .type(OBJECT_TYPE)
+                                .description(getOperation.description)
+                                .deprecate(getOperation.deprecationReason)
 
-                    codeRegistry
-                        .dataFetcher(
-                                coordinates(QUERY_TYPE_NAME, GET_FIELD_NAME),
-                                new InterceptingDataFetcher(entity, serviceManager, queryInterceptorInvoker, GET, getFetcher)
-                        )
-
-                    requiresIdentityArguments.add(queryOne)
-                    queryFields.add(queryOne)
-                }
-
-                ListOperation listOperation = mapping.operations.list
-                if (queryOperation.enabled && listOperation.enabled) {
-
-                    DataFetcher listFetcher = dataFetcherManager.getReadingFetcher(entity, LIST).orElse(null)
-
-                    final String LIST_FIELD_NAME = namingConvention.getList(entity)
-                    GraphQLFieldDefinition.Builder queryAll = newFieldDefinition()
-                            .name(LIST_FIELD_NAME)
-                            .description(listOperation.description)
-                            .deprecate(listOperation.deprecationReason)
-
-                    GraphQLOutputType listOutputType
-                    if (listOperation.paginate) {
-                        if (listFetcher == null) {
-                            listFetcher = new PaginatedEntityDataFetcher(entity)
-                        }
-                        listOutputType = typeManager.getQueryType(entity, GraphQLPropertyType.OUTPUT_PAGED)
-                    } else {
-                        if (listFetcher == null) {
-                            listFetcher = new EntityDataFetcher(entity)
-                        }
-                        listOutputType = list(OBJECT_TYPE)
-                    }
-                    queryAll.type(listOutputType)
-
-                    if (listFetcher instanceof PaginatingGormDataFetcher) {
-                        ((PaginatingGormDataFetcher) listFetcher).responseHandler = paginationResponseHandler
-                    }
-                    
-                    codeRegistry.dataFetcher(
-                            coordinates(QUERY_TYPE_NAME, LIST_FIELD_NAME),
-                            new InterceptingDataFetcher(entity, serviceManager, queryInterceptorInvoker, LIST, listFetcher)
-                    )
-                    
-                    queryFields.add(queryAll)
-
-                    for (Map.Entry<String, GraphQLInputType> argument: listArguments) {
-                        queryAll.argument(
-                                newArgument()
-                                        .name(argument.key)
-                                        .type(argument.value))
-                    }
-                }
-
-                ProvidedOperation countOperation = mapping.operations.count
-                if (queryOperation.enabled && countOperation.enabled) {
-
-                    DataFetcher countFetcher = dataFetcherManager.getReadingFetcher(entity, COUNT).orElse(new CountEntityDataFetcher(entity))
-
-                    final String COUNT_FIELD_NAME = namingConvention.getCount(entity)
-                    final GraphQLOutputType COUNT_OUTPUT_TYPE = (GraphQLOutputType)typeManager.getType(Integer)
-
-                    GraphQLFieldDefinition.Builder queryCount = newFieldDefinition()
-                            .name(COUNT_FIELD_NAME)
-                            .type(COUNT_OUTPUT_TYPE)
-                            .description(countOperation.description)
-                            .deprecate(countOperation.deprecationReason)
-
-                    codeRegistry.dataFetcher(
-                            coordinates(QUERY_TYPE_NAME, COUNT_FIELD_NAME),
-                            new InterceptingDataFetcher(entity, serviceManager, queryInterceptorInvoker, COUNT, countFetcher)
-                    )
-
-                    queryFields.add(queryCount)
-                }
-
-                InterceptorInvoker mutationInterceptorInvoker = new MutationInterceptorInvoker()
-
-                GraphQLDataBinder dataBinder = dataBinderManager.getDataBinder(entity.javaClass)
-
-                ProvidedOperation createOperation = mapping.operations.create
-                if (mutationOperation.enabled && createOperation.enabled && !Modifier.isAbstract(entity.javaClass.modifiers)) {
-                    if (dataBinder == null) {
-                        throw new DataBinderNotFoundException(entity)
-                    }
-                    GraphQLInputType createObjectType = typeManager.getMutationType(entity, GraphQLPropertyType.CREATE, true)
-
-                    BindingGormDataFetcher createFetcher = dataFetcherManager.getBindingFetcher(entity, CREATE).orElse(new CreateEntityDataFetcher(entity))
-
-                    createFetcher.dataBinder = dataBinder
-
-                    final String CREATE_FIELD_NAME = namingConvention.getCreate(entity)
-
-                    GraphQLFieldDefinition.Builder create = newFieldDefinition()
-                            .name(CREATE_FIELD_NAME)
-                            .type(OBJECT_TYPE)
-                            .description(createOperation.description)
-                            .deprecate(createOperation.deprecationReason)
-                            .argument(newArgument()
-                                            .name(entity.decapitalizedName)
-                                            .type(createObjectType))
-
-                    codeRegistry.dataFetcher(
-                            coordinates(MUTATION_TYPE_NAME, CREATE_FIELD_NAME),
-                            new InterceptingDataFetcher(entity, serviceManager, mutationInterceptorInvoker, CREATE, createFetcher)
-                    )
-                    
-                    mutationFields.add(create)
-                }
-
-                ProvidedOperation updateOperation = mapping.operations.update
-                if (mutationOperation.enabled && updateOperation.enabled) {
-                    if (dataBinder == null) {
-                        throw new DataBinderNotFoundException(entity)
-                    }
-                    GraphQLInputType updateObjectType = typeManager.getMutationType(entity, GraphQLPropertyType.UPDATE, true)
-
-                    BindingGormDataFetcher updateFetcher = dataFetcherManager.getBindingFetcher(entity, UPDATE).orElse(new UpdateEntityDataFetcher(entity))
-
-                    updateFetcher.dataBinder = dataBinder
-
-                    final String UPDATE_FIELD_NAME = namingConvention.getUpdate(entity)
-
-                    GraphQLFieldDefinition.Builder update = newFieldDefinition()
-                            .name(UPDATE_FIELD_NAME)
-                            .type(OBJECT_TYPE)
-                            .description(updateOperation.description)
-                            .deprecate(updateOperation.deprecationReason)
-
-                    codeRegistry.dataFetcher(
-                            coordinates(MUTATION_TYPE_NAME, UPDATE_FIELD_NAME),
-                            new InterceptingDataFetcher(entity, serviceManager, mutationInterceptorInvoker, UPDATE, updateFetcher)
-                    )
-
-                    postIdentityExecutables.add {
-                        update.argument(newArgument()
-                                .name(entity.decapitalizedName)
-                                .type(updateObjectType))
-                    }
-
-                    requiresIdentityArguments.add(update)
-                    mutationFields.add(update)
-                }
-
-                ProvidedOperation deleteOperation = mapping.operations.delete
-                if (mutationOperation.enabled && deleteOperation.enabled) {
-
-                    DeletingGormDataFetcher deleteFetcher = dataFetcherManager.getDeletingFetcher(entity).orElse(new DeleteEntityDataFetcher(entity))
-
-                    deleteFetcher.responseHandler = deleteResponseHandler
-
-                    final String DELETE_FIELD_NAME = namingConvention.getDelete(entity)
-                    final GraphQLObjectType DELETE_OBJECT_TYPE = deleteResponseHandler.getObjectType(typeManager)
-
-                    GraphQLFieldDefinition.Builder delete = newFieldDefinition()
-                            .name(DELETE_FIELD_NAME)
-                            .type(DELETE_OBJECT_TYPE)
-                            .description(deleteOperation.description)
-                            .deprecate(deleteOperation.deprecationReason)
-
-                    codeRegistry.dataFetcher(
-                                    coordinates(MUTATION_TYPE_NAME, DELETE_FIELD_NAME),
-                                    new InterceptingDataFetcher(entity, serviceManager, mutationInterceptorInvoker, DELETE, deleteFetcher)
+                        codeRegistry
+                            .dataFetcher(
+                                    coordinates(QUERY_TYPE_NAME, GET_FIELD_NAME),
+                                    new InterceptingDataFetcher(entity, serviceManager, queryInterceptorInvoker, GET, getFetcher)
                             )
 
-                    requiresIdentityArguments.add(delete)
-                    mutationFields.add(delete)
+                        requiresIdentityArguments.add(queryOne)
+                        queryFields.add(queryOne)
+                    }
+
+                    ListOperation listOperation = mapping.operations.list
+                    if (queryOperation.enabled && listOperation.enabled) {
+
+                        DataFetcher listFetcher = dataFetcherManager.getReadingFetcher(entity, LIST).orElse(null)
+
+                        final String LIST_FIELD_NAME = namingConvention.getList(entity)
+                        GraphQLFieldDefinition.Builder queryAll = newFieldDefinition()
+                                .name(LIST_FIELD_NAME)
+                                .description(listOperation.description)
+                                .deprecate(listOperation.deprecationReason)
+
+                        GraphQLOutputType listOutputType
+                        if (listOperation.paginate) {
+                            if (listFetcher == null) {
+                                listFetcher = new PaginatedEntityDataFetcher(entity)
+                            }
+                            listOutputType = typeManager.getQueryType(entity, GraphQLPropertyType.OUTPUT_PAGED)
+                        } else {
+                            if (listFetcher == null) {
+                                listFetcher = new EntityDataFetcher(entity)
+                            }
+                            listOutputType = list(OBJECT_TYPE)
+                        }
+                        queryAll.type(listOutputType)
+
+                        if (listFetcher instanceof PaginatingGormDataFetcher) {
+                            ((PaginatingGormDataFetcher) listFetcher).responseHandler = paginationResponseHandler
+                        }
+
+                        codeRegistry.dataFetcher(
+                                coordinates(QUERY_TYPE_NAME, LIST_FIELD_NAME),
+                                new InterceptingDataFetcher(entity, serviceManager, queryInterceptorInvoker, LIST, listFetcher)
+                        )
+
+                        queryFields.add(queryAll)
+
+                        for (Map.Entry<String, GraphQLInputType> argument: listArguments) {
+                            queryAll.argument(
+                                    newArgument()
+                                            .name(argument.key)
+                                            .type(argument.value))
+                        }
+                    }
+
+                    ProvidedOperation countOperation = mapping.operations.count
+                    if (queryOperation.enabled && countOperation.enabled) {
+
+                        DataFetcher countFetcher = dataFetcherManager.getReadingFetcher(entity, COUNT).orElse(new CountEntityDataFetcher(entity))
+
+                        final String COUNT_FIELD_NAME = namingConvention.getCount(entity)
+                        final GraphQLOutputType COUNT_OUTPUT_TYPE = (GraphQLOutputType)typeManager.getType(Integer)
+
+                        GraphQLFieldDefinition.Builder queryCount = newFieldDefinition()
+                                .name(COUNT_FIELD_NAME)
+                                .type(COUNT_OUTPUT_TYPE)
+                                .description(countOperation.description)
+                                .deprecate(countOperation.deprecationReason)
+
+                        codeRegistry.dataFetcher(
+                                coordinates(QUERY_TYPE_NAME, COUNT_FIELD_NAME),
+                                new InterceptingDataFetcher(entity, serviceManager, queryInterceptorInvoker, COUNT, countFetcher)
+                        )
+
+                        queryFields.add(queryCount)
+                    }
+
+                    InterceptorInvoker mutationInterceptorInvoker = new MutationInterceptorInvoker()
+
+                    GraphQLDataBinder dataBinder = dataBinderManager.getDataBinder(entity.javaClass)
+
+                    ProvidedOperation createOperation = mapping.operations.create
+                    if (mutationOperation.enabled && createOperation.enabled && !Modifier.isAbstract(entity.javaClass.modifiers)) {
+                        if (dataBinder == null) {
+                            throw new DataBinderNotFoundException(entity)
+                        }
+                        GraphQLInputType createObjectType = typeManager.getMutationType(entity, GraphQLPropertyType.CREATE, true)
+
+                        BindingGormDataFetcher createFetcher = dataFetcherManager.getBindingFetcher(entity, CREATE).orElse(new CreateEntityDataFetcher(entity))
+
+                        createFetcher.dataBinder = dataBinder
+
+                        final String CREATE_FIELD_NAME = namingConvention.getCreate(entity)
+
+                        GraphQLFieldDefinition.Builder create = newFieldDefinition()
+                                .name(CREATE_FIELD_NAME)
+                                .type(OBJECT_TYPE)
+                                .description(createOperation.description)
+                                .deprecate(createOperation.deprecationReason)
+                                .argument(newArgument()
+                                                .name(entity.decapitalizedName)
+                                                .type(createObjectType))
+
+                        codeRegistry.dataFetcher(
+                                coordinates(MUTATION_TYPE_NAME, CREATE_FIELD_NAME),
+                                new InterceptingDataFetcher(entity, serviceManager, mutationInterceptorInvoker, CREATE, createFetcher)
+                        )
+
+                        mutationFields.add(create)
+                    }
+
+                    ProvidedOperation updateOperation = mapping.operations.update
+                    if (mutationOperation.enabled && updateOperation.enabled) {
+                        if (dataBinder == null) {
+                            throw new DataBinderNotFoundException(entity)
+                        }
+                        GraphQLInputType updateObjectType = typeManager.getMutationType(entity, GraphQLPropertyType.UPDATE, true)
+
+                        BindingGormDataFetcher updateFetcher = dataFetcherManager.getBindingFetcher(entity, UPDATE).orElse(new UpdateEntityDataFetcher(entity))
+
+                        updateFetcher.dataBinder = dataBinder
+
+                        final String UPDATE_FIELD_NAME = namingConvention.getUpdate(entity)
+
+                        GraphQLFieldDefinition.Builder update = newFieldDefinition()
+                                .name(UPDATE_FIELD_NAME)
+                                .type(OBJECT_TYPE)
+                                .description(updateOperation.description)
+                                .deprecate(updateOperation.deprecationReason)
+
+                        codeRegistry.dataFetcher(
+                                coordinates(MUTATION_TYPE_NAME, UPDATE_FIELD_NAME),
+                                new InterceptingDataFetcher(entity, serviceManager, mutationInterceptorInvoker, UPDATE, updateFetcher)
+                        )
+
+                        postIdentityExecutables.add {
+                            update.argument(newArgument()
+                                    .name(entity.decapitalizedName)
+                                    .type(updateObjectType))
+                        }
+
+                        requiresIdentityArguments.add(update)
+                        mutationFields.add(update)
+                    }
+
+                    ProvidedOperation deleteOperation = mapping.operations.delete
+                    if (mutationOperation.enabled && deleteOperation.enabled) {
+
+                        DeletingGormDataFetcher deleteFetcher = dataFetcherManager.getDeletingFetcher(entity).orElse(new DeleteEntityDataFetcher(entity))
+
+                        deleteFetcher.responseHandler = deleteResponseHandler
+
+                        final String DELETE_FIELD_NAME = namingConvention.getDelete(entity)
+                        final GraphQLObjectType DELETE_OBJECT_TYPE = deleteResponseHandler.getObjectType(typeManager)
+
+                        GraphQLFieldDefinition.Builder delete = newFieldDefinition()
+                                .name(DELETE_FIELD_NAME)
+                                .type(DELETE_OBJECT_TYPE)
+                                .description(deleteOperation.description)
+                                .deprecate(deleteOperation.deprecationReason)
+
+                        codeRegistry.dataFetcher(
+                                        coordinates(MUTATION_TYPE_NAME, DELETE_FIELD_NAME),
+                                        new InterceptingDataFetcher(entity, serviceManager, mutationInterceptorInvoker, DELETE, deleteFetcher)
+                                )
+
+                        requiresIdentityArguments.add(delete)
+                        mutationFields.add(delete)
+                    }
                 }
 
                 final GraphQLFieldDefinition.Builder[] BUILDERS = requiresIdentityArguments as GraphQLFieldDefinition.Builder[]
